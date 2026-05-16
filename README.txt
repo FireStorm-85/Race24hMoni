@@ -1,0 +1,1 @@
+24h Nurburgring Live - no demo, ticker from liveticker.php, auto wige/azure

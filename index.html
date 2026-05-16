@@ -52,14 +52,33 @@ tr:hover{background:#0f181b}
 <script>
 setInterval(()=>document.getElementById('time').textContent=new Date().toLocaleTimeString('de-DE'),1000);
 
-const tkFallback=[
- {t:"19:32",n:"#34",m:"Krognes/Drudi/Thiim",a:"Aston Martin Vantage GT3",txt:"Krognes: Aero-Teil wieder dran, sofort mehr Pace"},
- {t:"19:27",n:"#786",m:"Mutsch",a:"Lamborghini Huracan",txt:"Heckflügel nach Einschlag Breidscheid ab"},
- {t:"19:20",n:"#911",m:"Estre",a:"Porsche Grello",txt:"Ausfall nach Ölspur Brünnchen"},
-];
 
 function renderTicker(d){const e=document.getElementById('tk');e.innerHTML='';d.forEach(x=>{e.innerHTML+=`<div class="msg ${/Ausfall|Einschlag|Strafe/.test(x.txt)?'warn':''}"><b>${x.t} ${x.n}</b> – ${x.m} <i style="color:#8fa">${x.a}</i><br>${x.txt}</div>`})}
-async function loadTicker(){try{const r=await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent('https://www.24h-rennen.de/liveticker.php'));const t=await r.text();const lines=t.match(/\|[^|]+\|[^|]+\|/g)||[];const out=[];lines.slice(0,25).forEach(l=>{const p=l.split('|');if(p.length>2){const tm=p[1].trim();const full=p[2].trim();const nr=(full.match(/#\d+/)?full.match(/#\d+/)[0]:'');out.push({t:tm,n:nr,m:full.slice(0,50),a:'',txt:full})}});if(out.length){renderTicker(out);document.getElementById('ts').textContent='LIVE';return}}catch(e){}renderTicker(tkFallback);document.getElementById('ts').textContent='DEMO'}
+async function loadTicker(){
+ try{
+   const proxy='https://api.allorigins.win/raw?url=';
+   const url='https://www.24h-rennen.de/liveticker.php';
+   const r=await fetch(proxy+encodeURIComponent(url),{cache:'no-store'});
+   const t=await r.text();
+   // parse simple table rows
+   const parser=new DOMParser();
+   const doc=parser.parseFromString(t,'text/html');
+   const rows=[...doc.querySelectorAll('tr')].slice(1,40);
+   const out=[];
+   rows.forEach(tr=>{
+     const tds=[...tr.querySelectorAll('td')];
+     if(tds.length>=2){
+       const tm=tds[0].textContent.trim();
+       const txt=tds[1].textContent.trim();
+       const nr=(txt.match(/#\d+/)?txt.match(/#\d+/)[0]:'');
+       const car=(txt.match(/Porsche|BMW|Mercedes|Audi|Ferrari|Lamborghini|Ford|Aston|McLaren/i)?txt.match(/Porsche|BMW|Mercedes|Audi|Ferrari|Lamborghini|Ford|Aston|McLaren/i)[0]:'');
+       out.push({t:tm,n:nr,m:'',a:car,txt:txt});
+     }
+   });
+   if(out.length){renderTicker(out);document.getElementById('ts').textContent='LIVE';return}
+ }catch(e){console.log(e)}
+ document.getElementById('ts').textContent='warte...';
+}
 
 // --- ECHTES PARSING ---
 async function loadStanding(){
@@ -102,17 +121,9 @@ async function loadStanding(){
   }catch(e){continue}
  }
  if(!data){
-   // Fallback mit echten Fahrzeugen aus dem aktuellen Rennen 2026
-   data=[
-    {p:1,nr:"67",drivers:"Olsen / Mies / Vervisch / Stippler",car:"Ford Mustang GT3 EVO",time:"3:14:22.115",laps:"29",gap:""},
-    {p:2,nr:"3",drivers:"Verstappen / Auer / Gounon / Juncadella",car:"Mercedes-AMG GT3",time:"3:14:24.546",laps:"29",gap:"+2.431"},
-    {p:3,nr:"34",drivers:"Krognes / Drudi / Thiim / Fernandez",car:"Aston Martin Vantage AMR GT3 EVO",time:"3:14:34.992",laps:"29",gap:"+12.877"},
-    {p:4,nr:"1",drivers:"Farfus / Marciello / Pepper / van der Linde",car:"BMW M4 GT3 EVO",time:"3:14:40.657",laps:"29",gap:"+18.542"},
-    {p:5,nr:"99",drivers:"Harper / Hesse / S.v.d.Linde / Vanthoor",car:"BMW M4 GT3 EVO",time:"3:14:47.218",laps:"29",gap:"+25.103"},
-    {p:6,nr:"80",drivers:"Engel / Stolz / Schiller / Martin",car:"Mercedes-AMG GT3",time:"3:14:53.325",laps:"28",gap:"+1 Rd"},
-    {p:7,nr:"7",drivers:"Stalidzane / Paul / Engelhart / Lefterov",car:"Lamborghini Huracan GT3 EVO2",time:"3:15:06.117",laps:"28",gap:"+1 Rd"},
-   ];
-   ss.textContent='DEMO (CSV nicht erreichbar)';
+   ss.textContent='warte auf Wige/Azure...';
+   document.getElementById('st').innerHTML='<tr><td colspan=7 style="text-align:center;padding:20px;color:#8d9aa0">Keine Live-Daten – Wige sperrt aktuell. Versuche neu...</td></tr>';
+   return;
  }else{
    ss.textContent='LIVE';
  }
