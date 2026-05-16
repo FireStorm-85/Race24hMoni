@@ -54,6 +54,10 @@ tr:hover{background:#0f181b}
    <div class="table"><table><thead><tr><th>Pl</th><th>Nr</th><th>Fahrer</th><th>Auto</th><th>Zeit</th><th>R</th><th>Gap</th></tr></thead><tbody id="st"></tbody></table></div>
  </div>
 </main>
+<script type="module">
+import { injectSpeedInsights } from 'https://cdn.jsdelivr.net/npm/@vercel/speed-insights@1/dist/index.mjs';
+injectSpeedInsights();
+</script>
 <script>
 const RACE_START = new Date('2026-05-16T15:00:00+02:00').getTime();
 setInterval(()=>{

@@ -1,0 +1,15 @@
+{
+  "name": "racemonitor24h",
+  "version": "1.0.0",
+  "description": "24h Nürburgring Live Monitor",
+  "scripts": {
+    "build": "echo 'Static site - no build step required'",
+    "dev": "npx serve ."
+  },
+  "keywords": ["racing", "nurburgring", "monitoring"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@vercel/speed-insights": "^1.1.0"
+  }
+}
