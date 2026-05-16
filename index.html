@@ -13,9 +13,9 @@ header{display:flex;justify-content:space-between;align-items:center;padding:10p
 .live{display:flex;gap:8px;align-items:center}
 .dot{width:8px;height:8px;background:var(--red);border-radius:50%;animation:bl 1.3s infinite}
 @keyframes bl{0%{opacity:1}50%{opacity:.3}100%{opacity:1}}
-main{flex:1;display:grid;grid-template-rows:50vh 1fr;gap:12px;padding:12px;min-height:0}
-
-.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+main{flex:1;display:grid;grid-template-columns:360px 1fr;gap:12px;padding:12px;min-height:0}
+@media(max-width:1000px){main{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;overflow:hidden}
 .ph{padding:8px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:#a7c7b8}
 .ticker{overflow:auto;padding:8px;flex:1}
 .msg{background:#0c1214;border-left:3px solid var(--accent);margin-bottom:7px;padding:7px 9px;border-radius:6px;font-size:12px}
@@ -36,12 +36,7 @@ tr:hover{background:#0f181b}
 <body>
 <header>
  <div class="logo"><div>24h</div><span>NÜRBURGRING LIVE</span></div>
- <div class="live" style="gap:12px;flex-wrap:wrap">
-   <div style="display:flex;align-items:center;gap:6px"><div class="dot" id="flagdot" style="background:#00ff88"></div><span id="flag" style="font-weight:700">GREEN</span></div>
-   <div>Rennzeit: <span id="racetime">--:--:--</span> / Rest: <span id="remaining">24:00:00</span></div>
-   <div id="weather" style="opacity:.9">Wetter: --°C</div>
-   <div style="opacity:.7">Uhr: <span id="time">--:--:--</span></div>
- </div>
+ <div class="live"><div class="dot"></div><span id="time">--:--:--</span></div>
  <div><button onclick="location.reload()" style="background:#152024;color:#fff;border:1px solid #2a3a40;padding:6px 10px;border-radius:8px;cursor:pointer">Neu laden</button></div>
 </header>
 <main>
@@ -55,36 +50,10 @@ tr:hover{background:#0f181b}
  </div>
 </main>
 <script>
-const RACE_START = new Date('2026-05-16T15:00:00+02:00').getTime();
-setInterval(()=>{
-  const now=new Date();
-  document.getElementById('time').textContent=now.toLocaleTimeString('de-DE');
-  const elapsed=Math.max(0, Math.floor((now.getTime()-RACE_START)/1000));
-  const h=String(Math.floor(elapsed/3600)).padStart(2,'0');
-  const m=String(Math.floor((elapsed%3600)/60)).padStart(2,'0');
-  const s=String(elapsed%60).padStart(2,'0');
-  document.getElementById('racetime').textContent=`${h}:${m}:${s}`;
-  const total=24*3600;
-  const rem=Math.max(0, total-elapsed);
-  const rh=String(Math.floor(rem/3600)).padStart(2,'0');
-  const rm=String(Math.floor((rem%3600)/60)).padStart(2,'0');
-  const rs=String(rem%60).padStart(2,'0');
-  document.getElementById('remaining').textContent=`${rh}:${rm}:${rs}`;
-},1000);
-// Flaggen aus Ticker erkennen
-function updateFlag(txt){
-  const f=document.getElementById('flag');const d=document.getElementById('flagdot');
-  let status='GREEN'; let color='#00ff88'; let sector='';
-  if(/Code 60|Slow Zone|Gelb|gelb|Safety/i.test(txt)){status='YELLOW';color='#ffcc00';}
-  else if(/Rot|Abbruch|Red Flag/i.test(txt)){status='RED';color='#ff4040';}
-  // Sektor erkennen
-  const secMatch=txt.match(/Sektor\s*\d+|Sector\s*\d+|Breidscheid|Karussell|Pflanzgarten|Schwalbenschwanz|Döttinger|Brünnchen|Hatzenbach|Hohe Acht|Flugplatz|Bergwerk|Kesselchen|Galgenkopf|Adenauer|Metzgesfeld|Kallenhard|Wehrseifen|Ex-Mühle|Kottenborn/i);
-  if(secMatch) sector=' • '+secMatch[0];
-  f.textContent=status+sector; d.style.background=color;
-}
+setInterval(()=>document.getElementById('time').textContent=new Date().toLocaleTimeString('de-DE'),1000);
 
 
-function renderTicker(d){const e=document.getElementById('tk');e.innerHTML='';d.forEach(x=>{e.innerHTML+=`<div class="msg ${/Ausfall|Einschlag|Strafe/.test(x.txt)?'warn':''}"><b>${x.t} ${x.n}</b> – ${x.m} <i style="color:#8fa">${x.a}</i><br>${x.txt}</div>`}); if(d[0]) updateFlag(d[0].txt)}
+function renderTicker(d){const e=document.getElementById('tk');e.innerHTML='';d.forEach(x=>{e.innerHTML+=`<div class="msg ${/Ausfall|Einschlag|Strafe/.test(x.txt)?'warn':''}"><b>${x.t} ${x.n}</b> – ${x.m} <i style="color:#8fa">${x.a}</i><br>${x.txt}</div>`})}
 async function loadTicker(){
  try{
    const proxy='https://api.allorigins.win/raw?url=';
@@ -113,27 +82,60 @@ async function loadTicker(){
 
 // --- ECHTES PARSING ---
 async function loadStanding(){
-  const out=document.getElementById('sd');
-  out.innerHTML = `<iframe src="https://www.timing71.org/embedded/nurburgring-24h" style="width:100%;height:100%;border:0;background:#0b1215" loading="lazy"></iframe><div style="position:absolute;top:4px;right:8px;font-size:11px;color:#8fa">timing71</div>`;
-  document.getElementById('ss').textContent='timing71 iframe';
+ const ss=document.getElementById('ss');
+ ss.textContent='suche...';
+ const candidates=[
+   // wige CSV (aktuelles Rennen) – URL kann sich jährlich ändern, hier Platzhalter
+   'https://api.allorigins.win/raw?url='+encodeURIComponent('https://livetiming.wige.de/24h/RESULT.csv'),
+   'https://api.allorigins.win/raw?url='+encodeURIComponent('https://livetiming.wige.de/24h/current/RESULT.csv'),
+   // itelemetry Beispiel
+   'https://api.allorigins.win/raw?url='+encodeURIComponent('https://itelemetry.app/api/standings/24h-nbr'),
+   // azure fallback
+   'https://api.allorigins.win/raw?url='+encodeURIComponent('https://livetiming.azurewebsites.net/api/standings?event=50')
+ ];
+ let data=null;
+ for(const url of candidates){
+  try{
+    const r=await fetch(url,{cache:'no-store'});
+    if(!r.ok) continue;
+    const txt=await r.text();
+    // Erkenne CSV
+    if(txt.includes('Pos,Nr')||txt.includes('Pos;Nr')){
+      const sep=txt.includes(';')?';':',';
+      const rows=txt.split('\n').slice(1).filter(l=>l.trim());
+      data=rows.slice(0,30).map(line=>{
+        const c=line.split(sep);
+        return {p:parseInt(c[0])||0,nr:c[1],drivers:c[3]||c[5]||'',car:(c[6]||'')+' '+(c[7]||''),time:c[9]||c[8]||'',laps:c[10]||'',gap:c[11]||''}
+      }).filter(x=>x.nr);
+      if(data.length) break;
+    }
+    // Erkenne JSON
+    if(txt.trim().startsWith('{')||txt.trim().startsWith('[')){
+      const j=JSON.parse(txt);
+      const arr=Array.isArray(j)?j:(j.standings||j.data||[]);
+      if(arr.length){
+        data=arr.slice(0,30).map((x,i)=>({p:x.position||i+1,nr:x.number||x.nr,drivers:x.drivers||x.driver||'',car:x.vehicle||x.car||'',time:x.time||x.last||'',laps:x.laps||'',gap:x.gap||''}));
+        break;
+      }
+    }
+  }catch(e){continue}
+ }
+ if(!data){
+   ss.textContent='warte auf Wige/Azure...';
+   document.getElementById('st').innerHTML='<tr><td colspan=7 style="text-align:center;padding:20px;color:#8d9aa0">Keine Live-Daten – Wige sperrt aktuell. Versuche neu...</td></tr>';
+   return;
+ }else{
+   ss.textContent='LIVE';
+ }
+ const tb=document.getElementById('st');tb.innerHTML='';
+ data.forEach(r=>{
+  tb.innerHTML+=`<tr><td class="pos ${r.p==1?'p1':''}">${r.p}</td><td>${r.nr}</td><td class="drivers" title="${r.drivers}">${r.drivers}</td><td class="car" title="${r.car}">${r.car}</td><td>${r.time}</td><td>${r.laps}</td><td class="gap">${r.gap}</td></tr>`
+ });
 }
 
-loadTicker();loadStanding();loadWeather();
+loadTicker();loadStanding();
 setInterval(loadTicker,20000);
 setInterval(loadStanding,25000);
-
-async function loadWeather(){
- try{
-  const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=50.33&longitude=6.95&current=temperature_2m,precipitation,weather_code,wind_speed_10m');
-  const j=await r.json();
-  const t=Math.round(j.current.temperature_2m);
-  const w=j.current.wind_speed_10m;
-  const p=j.current.precipitation;
-  document.getElementById('weather').textContent=`Nürburg: ${t}°C, Wind ${w}km/h${p>0?`, Regen ${p}mm`:''}`;
- }catch(e){document.getElementById('weather').textContent='Wetter: n/a'}
-}
-loadWeather(); setInterval(loadWeather, 600000);
-
 </script>
 </body>
 </html>
