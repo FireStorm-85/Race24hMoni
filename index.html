@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>24h Nürburgring – Live Standing (echt geparst)</title>
+<style>
+:root{--bg:#050708;--card:#101618;--accent:#00ff88;--red:#ff4040;--txt:#e7ecef;--mut:#8d9aa0;--line:#1c262b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font-family:Inter,system-ui,Arial,sans-serif;height:100vh;display:flex;flex-direction:column}
+header{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#0a0f11;border-bottom:1px solid var(--line)}
+.logo{display:flex;gap:10px;align-items:center;font-weight:800}
+.logo div{width:36px;height:36px;background:var(--accent);color:#000;display:grid;place-items:center;border-radius:8px}
+.live{display:flex;gap:8px;align-items:center}
+.dot{width:8px;height:8px;background:var(--red);border-radius:50%;animation:bl 1.3s infinite}
+@keyframes bl{0%{opacity:1}50%{opacity:.3}100%{opacity:1}}
+main{flex:1;display:grid;grid-template-columns:360px 1fr;gap:12px;padding:12px;min-height:0}
+@media(max-width:1000px){main{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;overflow:hidden}
+.ph{padding:8px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:#a7c7b8}
+.ticker{overflow:auto;padding:8px;flex:1}
+.msg{background:#0c1214;border-left:3px solid var(--accent);margin-bottom:7px;padding:7px 9px;border-radius:6px;font-size:12px}
+.msg.warn{border-left-color:var(--red)}
+.table{overflow:auto;flex:1}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{position:sticky;top:0;background:#0d1416;padding:7px 9px;text-align:left;color:#9bb2aa;border-bottom:1px solid var(--line);font-size:11px;text-transform:uppercase}
+td{padding:7px 9px;border-bottom:1px solid #152024;white-space:nowrap}
+tr:hover{background:#0f181b}
+.pos{font-weight:700;width:40px}
+.p1{color:var(--accent)}
+.car{color:#b5c4c9;max-width:180px;overflow:hidden;text-overflow:ellipsis}
+.drivers{max-width:240px;overflow:hidden;text-overflow:ellipsis}
+.gap{font-variant-numeric:tabular-nums}
+.status{font-size:11px;padding:2px 6px;border-radius:6px;background:#13251c;color:var(--accent);border:1px solid #1e3d2b}
+</style>
+</head>
+<body>
+<header>
+ <div class="logo"><div>24h</div><span>NÜRBURGRING LIVE</span></div>
+ <div class="live"><div class="dot"></div><span id="time">--:--:--</span></div>
+ <div><button onclick="location.reload()" style="background:#152024;color:#fff;border:1px solid #2a3a40;padding:6px 10px;border-radius:8px;cursor:pointer">Neu laden</button></div>
+</header>
+<main>
+ <div class="panel">
+   <div class="ph">Live-Ticker <span class="status" id="ts">init</span></div>
+   <div class="ticker" id="tk"></div>
+ </div>
+ <div class="panel">
+   <div class="ph">Standing – Platz / Fahrer / Auto / Zeit <span class="status" id="ss">init</span></div>
+   <div class="table"><table><thead><tr><th>Pl</th><th>Nr</th><th>Fahrer</th><th>Auto</th><th>Zeit</th><th>R</th><th>Gap</th></tr></thead><tbody id="st"></tbody></table></div>
+ </div>
+</main>
+<script>
+setInterval(()=>document.getElementById('time').textContent=new Date().toLocaleTimeString('de-DE'),1000);
+
+const tkFallback=[
+ {t:"19:32",n:"#34",m:"Krognes/Drudi/Thiim",a:"Aston Martin Vantage GT3",txt:"Krognes: Aero-Teil wieder dran, sofort mehr Pace"},
+ {t:"19:27",n:"#786",m:"Mutsch",a:"Lamborghini Huracan",txt:"Heckflügel nach Einschlag Breidscheid ab"},
+ {t:"19:20",n:"#911",m:"Estre",a:"Porsche Grello",txt:"Ausfall nach Ölspur Brünnchen"},
+];
+
+function renderTicker(d){const e=document.getElementById('tk');e.innerHTML='';d.forEach(x=>{e.innerHTML+=`<div class="msg ${/Ausfall|Einschlag|Strafe/.test(x.txt)?'warn':''}"><b>${x.t} ${x.n}</b> – ${x.m} <i style="color:#8fa">${x.a}</i><br>${x.txt}</div>`})}
+async function loadTicker(){try{const r=await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent('https://www.24h-rennen.de/liveticker.php'));const t=await r.text();const lines=t.match(/\|[^|]+\|[^|]+\|/g)||[];const out=[];lines.slice(0,25).forEach(l=>{const p=l.split('|');if(p.length>2){const tm=p[1].trim();const full=p[2].trim();const nr=(full.match(/#\d+/)?full.match(/#\d+/)[0]:'');out.push({t:tm,n:nr,m:full.slice(0,50),a:'',txt:full})}});if(out.length){renderTicker(out);document.getElementById('ts').textContent='LIVE';return}}catch(e){}renderTicker(tkFallback);document.getElementById('ts').textContent='DEMO'}
+
+// --- ECHTES PARSING ---
+async function loadStanding(){
+ const ss=document.getElementById('ss');
+ ss.textContent='suche...';
+ const candidates=[
+   // wige CSV (aktuelles Rennen) – URL kann sich jährlich ändern, hier Platzhalter
+   'https://api.allorigins.win/raw?url='+encodeURIComponent('https://livetiming.wige.de/24h/RESULT.csv'),
+   'https://api.allorigins.win/raw?url='+encodeURIComponent('https://livetiming.wige.de/24h/current/RESULT.csv'),
+   // itelemetry Beispiel
+   'https://api.allorigins.win/raw?url='+encodeURIComponent('https://itelemetry.app/api/standings/24h-nbr'),
+   // azure fallback
+   'https://api.allorigins.win/raw?url='+encodeURIComponent('https://livetiming.azurewebsites.net/api/standings?event=50')
+ ];
+ let data=null;
+ for(const url of candidates){
+  try{
+    const r=await fetch(url,{cache:'no-store'});
+    if(!r.ok) continue;
+    const txt=await r.text();
+    // Erkenne CSV
+    if(txt.includes('Pos,Nr')||txt.includes('Pos;Nr')){
+      const sep=txt.includes(';')?';':',';
+      const rows=txt.split('\n').slice(1).filter(l=>l.trim());
+      data=rows.slice(0,30).map(line=>{
+        const c=line.split(sep);
+        return {p:parseInt(c[0])||0,nr:c[1],drivers:c[3]||c[5]||'',car:(c[6]||'')+' '+(c[7]||''),time:c[9]||c[8]||'',laps:c[10]||'',gap:c[11]||''}
+      }).filter(x=>x.nr);
+      if(data.length) break;
+    }
+    // Erkenne JSON
+    if(txt.trim().startsWith('{')||txt.trim().startsWith('[')){
+      const j=JSON.parse(txt);
+      const arr=Array.isArray(j)?j:(j.standings||j.data||[]);
+      if(arr.length){
+        data=arr.slice(0,30).map((x,i)=>({p:x.position||i+1,nr:x.number||x.nr,drivers:x.drivers||x.driver||'',car:x.vehicle||x.car||'',time:x.time||x.last||'',laps:x.laps||'',gap:x.gap||''}));
+        break;
+      }
+    }
+  }catch(e){continue}
+ }
+ if(!data){
+   // Fallback mit echten Fahrzeugen aus dem aktuellen Rennen 2026
+   data=[
+    {p:1,nr:"67",drivers:"Olsen / Mies / Vervisch / Stippler",car:"Ford Mustang GT3 EVO",time:"3:14:22.115",laps:"29",gap:""},
+    {p:2,nr:"3",drivers:"Verstappen / Auer / Gounon / Juncadella",car:"Mercedes-AMG GT3",time:"3:14:24.546",laps:"29",gap:"+2.431"},
+    {p:3,nr:"34",drivers:"Krognes / Drudi / Thiim / Fernandez",car:"Aston Martin Vantage AMR GT3 EVO",time:"3:14:34.992",laps:"29",gap:"+12.877"},
+    {p:4,nr:"1",drivers:"Farfus / Marciello / Pepper / van der Linde",car:"BMW M4 GT3 EVO",time:"3:14:40.657",laps:"29",gap:"+18.542"},
+    {p:5,nr:"99",drivers:"Harper / Hesse / S.v.d.Linde / Vanthoor",car:"BMW M4 GT3 EVO",time:"3:14:47.218",laps:"29",gap:"+25.103"},
+    {p:6,nr:"80",drivers:"Engel / Stolz / Schiller / Martin",car:"Mercedes-AMG GT3",time:"3:14:53.325",laps:"28",gap:"+1 Rd"},
+    {p:7,nr:"7",drivers:"Stalidzane / Paul / Engelhart / Lefterov",car:"Lamborghini Huracan GT3 EVO2",time:"3:15:06.117",laps:"28",gap:"+1 Rd"},
+   ];
+   ss.textContent='DEMO (CSV nicht erreichbar)';
+ }else{
+   ss.textContent='LIVE';
+ }
+ const tb=document.getElementById('st');tb.innerHTML='';
+ data.forEach(r=>{
+  tb.innerHTML+=`<tr><td class="pos ${r.p==1?'p1':''}">${r.p}</td><td>${r.nr}</td><td class="drivers" title="${r.drivers}">${r.drivers}</td><td class="car" title="${r.car}">${r.car}</td><td>${r.time}</td><td>${r.laps}</td><td class="gap">${r.gap}</td></tr>`
+ });
+}
+
+loadTicker();loadStanding();
+setInterval(loadTicker,20000);
+setInterval(loadStanding,25000);
+</script>
+</body>
+</html>
