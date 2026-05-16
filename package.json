@@ -1,0 +1,17 @@
+{
+  "name": "racemonitor24h",
+  "version": "1.0.0",
+  "description": "24h Nürburgring Live Standing",
+  "type": "module",
+  "scripts": {
+    "build": "echo 'No build step needed for static HTML'",
+    "dev": "npx serve .",
+    "lint": "echo 'No linter configured'"
+  },
+  "keywords": ["race", "nurburgring", "live"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@vercel/speed-insights": "^1.0.12"
+  }
+}
