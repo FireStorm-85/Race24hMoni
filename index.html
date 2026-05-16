@@ -114,30 +114,8 @@ async function loadTicker(){
 // --- ECHTES PARSING ---
 async function loadStanding(){
   const out=document.getElementById('sd');
-  try{
-    // Timing71 primary
-    let r=await fetch('https://corsproxy.io/?https://api.timing71.org/v2/events/24h-nbr-2026/standings',{cache:'no-store'});
-    if(!r.ok) throw 0;
-    let j=await r.json();
-    // Timing71 returns {entries:[{pos, number, drivers, lastLap, gap, class}]}
-    const rows = (j.entries||j.data||[]).slice(0,30).map(e=>{
-      const pos=e.position||e.pos||'?';
-      const num=e.number||e.car||'';
-      const drv=(e.drivers||[e.driver]).filter(Boolean).join(' / ').slice(0,22);
-      const cls=e.class||e.category||'';
-      const gap=e.gap||e.interval||'';
-      return `<tr><td>${pos}</td><td>${num}</td><td>${drv}</td><td>${cls}</td><td>${gap}</td></tr>`;
-    }).join('');
-    out.innerHTML=`<table><thead><tr><th>#</th><th>Nr</th><th>Fahrer</th><th>Kl</th><th>Gap</th></tr></thead><tbody>${rows}</tbody></table>`;
-    document.getElementById('ss').textContent='timing71';
-    return;
-  }catch(e){}
-  // Fallback wige/azure
-  try{
-    let r=await fetch('https://corsproxy.io/?https://livetiming.azurewebsites.net/api/standings');
-    if(r.ok){document.getElementById('ss').textContent='azure';}
-  }catch{}
-  out.innerHTML='<div style="padding:12px;color:#8fa">Live-Daten werden geladen… (Timing71 versucht)</div>';
+  out.innerHTML = `<iframe src="https://www.timing71.org/embedded/nurburgring-24h" style="width:100%;height:100%;border:0;background:#0b1215" loading="lazy"></iframe><div style="position:absolute;top:4px;right:8px;font-size:11px;color:#8fa">timing71</div>`;
+  document.getElementById('ss').textContent='timing71 iframe';
 }
 
 loadTicker();loadStanding();loadWeather();
